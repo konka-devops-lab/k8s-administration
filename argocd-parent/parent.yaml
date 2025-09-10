@@ -1,3 +1,35 @@
+# apiVersion: argoproj.io/v1alpha1
+# kind: ApplicationSet
+# metadata:
+#   name: parent-appset
+#   namespace: argocd
+# spec:
+#   generators:
+#     - git:
+#         repoURL: https://github.com/konka-devops-lab/k8s-administration.git
+#         revision: main
+#         files:
+#           - path: namespaces/*.yaml
+#           - path: rbac/*.yaml
+#           - path: storage-classes/*.yaml
+#   template:
+#     metadata:
+#       name: '{{path.basename}}'
+#     spec:
+#       project: default
+#       source:
+#         repoURL: https://github.com/konka-devops-lab/k8s-administration.git
+#         targetRevision: main
+#         path: '{{path.dir}}'
+#       destination:
+#         server: https://kubernetes.default.svc
+#         namespace: argocd
+#       syncPolicy:
+#         automated:
+#           prune: true
+#           selfHeal: true
+#         syncOptions:
+#         - CreateNamespace=true
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -8,10 +40,10 @@ spec:
     - git:
         repoURL: https://github.com/konka-devops-lab/k8s-administration.git
         revision: main
-        files:
-          - path: namespaces/*.yaml
-          - path: rbac/*.yaml
-          - path: storage-classes/*.yaml
+        directories:
+          - path: namespaces/*
+          - path: rbac/*
+          - path: storage-classes/*
   template:
     metadata:
       name: '{{path.basename}}'
@@ -20,7 +52,7 @@ spec:
       source:
         repoURL: https://github.com/konka-devops-lab/k8s-administration.git
         targetRevision: main
-        path: '{{path.dir}}'
+        path: '{{path}}'
       destination:
         server: https://kubernetes.default.svc
         namespace: argocd
