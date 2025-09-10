@@ -20,6 +20,7 @@ spec:
       source:
         repoURL: https://github.com/konka-devops-lab/k8s-administration.git
         targetRevision: main
+        path: '{{path}}'  # This is the critical missing line
       destination:
         server: https://kubernetes.default.svc
         namespace: argocd
