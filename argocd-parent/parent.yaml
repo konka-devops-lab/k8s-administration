@@ -8,10 +8,10 @@ spec:
     - git:
         repoURL: https://github.com/konka-devops-lab/k8s-administration.git
         revision: main
-        directories:
-          - path: namespaces/*
-          - path: rbac/*
-          - path: storage-classes/*
+        files:
+          - path: namespaces/*.yaml
+          - path: rbac/*.yaml
+          - path: storage-classes/*.yaml
   template:
     metadata:
       name: '{{path.basename}}'
@@ -20,7 +20,7 @@ spec:
       source:
         repoURL: https://github.com/konka-devops-lab/k8s-administration.git
         targetRevision: main
-        path: '{{path}}'
+        path: '{{path.dir}}'
       destination:
         server: https://kubernetes.default.svc
         namespace: argocd
