@@ -12,6 +12,7 @@ spec:
           - path: namespaces/*.yaml
           - path: rbac/*.yaml
           - path: storage-classes/*.yaml
+          - path: metrics-server/*.yaml
   template:
     metadata:
       name: '{{path.basename}}'
