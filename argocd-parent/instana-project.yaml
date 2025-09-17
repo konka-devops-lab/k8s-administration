@@ -7,7 +7,7 @@ metadata:
 spec:
   description: Instana project
   sourceRepos:
-    - 'https://github.com/konka-devops-lab/instana-helm.git'
+    - 'https://github.com/konka-devops-lab/instana-helmcharts.git'
   destinations:
     - namespace: '*'
       server: '*'
