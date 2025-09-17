@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: instana-db
+  name: redis
   namespace: argocd           # where ArgoCD is installed
 spec:
   project: default
@@ -11,7 +11,7 @@ spec:
     path: instana-db                                                  # path to chart inside repo
     helm:
       valueFiles:
-        - dev/mongo.yaml        # add whichever value files you need
+        - dev/mongo.yaml      # add whichever value files you need
         - dev/mysql.yaml
         - dev/rabbitmq.yaml
         - dev/redis.yaml
