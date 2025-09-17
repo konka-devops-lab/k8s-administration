@@ -4,7 +4,7 @@ metadata:
   name: rabbitmq
   namespace: argocd           # where ArgoCD is installed
 spec:
-  project: default
+  project: instana
   source:
     repoURL: 'https://github.com/konka-devops-lab/instana-helmcharts.git' # your repo
     targetRevision: HEAD                                         # branch/tag
