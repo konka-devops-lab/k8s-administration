@@ -31,198 +31,275 @@ subjects:
   name: filebeat
   namespace: logging
 ---
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: filebeat-config
+#   namespace: logging
+# data:
+#   filebeat.yml: |
+#     filebeat.inputs:
+#     # CART - NodeJS
+#     - type: container
+#       paths:
+#         - /var/log/containers/cart*.log
+#       processors:
+#         - add_kubernetes_metadata:
+#             host: ${NODE_NAME}
+#             matchers:
+#               - logs_path:
+#                   logs_path: "/var/log/containers/"
+#         - drop_event:
+#             when:
+#               not:
+#                 equals:
+#                   kubernetes.labels.app: "cart"
+#       fields:
+#         index: "cart-logs"
+
+#     # CATALOGUE - NodeJS
+#     - type: container
+#       paths:
+#         - /var/log/containers/catalogue*.log
+#       processors:
+#         - add_kubernetes_metadata:
+#             host: ${NODE_NAME}
+#             matchers:
+#               - logs_path:
+#                   logs_path: "/var/log/containers/"
+#         - drop_event:
+#             when:
+#               not:
+#                 equals:
+#                   kubernetes.labels.app: "catalogue"
+#       fields:
+#         index: "catalogue-logs"
+
+#     # USER - NodeJS
+#     - type: container
+#       paths:
+#         - /var/log/containers/user*.log
+#       processors:
+#         - add_kubernetes_metadata:
+#             host: ${NODE_NAME}
+#             matchers:
+#               - logs_path:
+#                   logs_path: "/var/log/containers/"
+#         - drop_event:
+#             when:
+#               not:
+#                 equals:
+#                   kubernetes.labels.app: "user"
+#       fields:
+#         index: "user-logs"
+
+#     # SHIPPING - Java
+#     - type: container
+#       paths:
+#         - /var/log/containers/shipping*.log
+#       processors:
+#         - add_kubernetes_metadata:
+#             host: ${NODE_NAME}
+#             matchers:
+#               - logs_path:
+#                   logs_path: "/var/log/containers/"
+#         - drop_event:
+#             when:
+#               not:
+#                 equals:
+#                   kubernetes.labels.app: "shipping"
+#       fields:
+#         index: "shipping-logs"
+
+#     # PAYMENT - Python
+#     - type: container
+#       paths:
+#         - /var/log/containers/payment*.log
+#       processors:
+#         - add_kubernetes_metadata:
+#             host: ${NODE_NAME}
+#             matchers:
+#               - logs_path:
+#                   logs_path: "/var/log/containers/"
+#         - drop_event:
+#             when:
+#               not:
+#                 equals:
+#                   kubernetes.labels.app: "payment"
+#       fields:
+#         index: "payment-logs"
+
+#     # FRONTEND - Nginx
+#     - type: container
+#       paths:
+#         - /var/log/containers/frontend*.log
+#       processors:
+#         - add_kubernetes_metadata:
+#             host: ${NODE_NAME}
+#             matchers:
+#               - logs_path:
+#                   logs_path: "/var/log/containers/"
+#         - drop_event:
+#             when:
+#               not:
+#                 equals:
+#                   kubernetes.labels.app: "frontend"
+#       fields:
+#         index: "frontend-logs"
+
+#     # DATABASES / BROKERS (Mongo, MySQL, Redis, RabbitMQ)
+#     - type: container
+#       paths:
+#         - /var/log/containers/mongo*.log
+#         - /var/log/containers/mysql*.log
+#         - /var/log/containers/redis*.log
+#         - /var/log/containers/rabbitmq*.log
+#       processors:
+#         - add_kubernetes_metadata:
+#             host: ${NODE_NAME}
+#             matchers:
+#               - logs_path:
+#                   logs_path: "/var/log/containers/"
+#       fields:
+#         index: "infrastructure-logs"
+
+#     output.logstash:
+#       hosts: ["logstash.logging.svc.cluster.local:5044"]
+#       index: '%{[fields.index]}-%{+yyyy.MM.dd}'  # Dynamically uses microservice index
+
+# ---
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: filebeat-config
   namespace: logging
 data:
-   filebeat.yml: |
+  filebeat.yml: |
     filebeat.inputs:
-    # NodeJS microservices
-    - type: container
-      paths:
-        - /var/log/containers/dev-cart*.log
-        - /var/log/containers/dev-catalogue*.log
-        - /var/log/containers/dev-user*.log
-      processors:
-        - add_kubernetes_metadata:
-            host: ${NODE_NAME}
-            matchers:
-              - logs_path:
-                  logs_path: "/var/log/containers/"
-      multiline.type: pattern
-      multiline.pattern: "^[0-9]{4}"
-      multiline.negate: true
-      multiline.match: after
+      # NodeJS microservices
+      - type: container
+        paths:
+          - /var/log/containers/cart*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+                - logs_path:
+                    logs_path: "/var/log/containers/"
+          - drop_event:
+              when:
+                not:
+                  equals:
+                    kubernetes.labels.app: "cart"
 
-    # Java microservice
-    - type: container
-      paths:
-        - /var/log/containers/dev-shipping*.log
-      processors:
-        - add_kubernetes_metadata:
-            host: ${NODE_NAME}
-            matchers:
-              - logs_path:
-                  logs_path: "/var/log/containers/"
+      - type: container
+        paths:
+          - /var/log/containers/catalogue*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+                - logs_path:
+                    logs_path: "/var/log/containers/"
+          - drop_event:
+              when:
+                not:
+                  equals:
+                    kubernetes.labels.app: "catalogue"
 
-    # Python microservice
-    - type: container
-      paths:
-        - /var/log/containers/dev-payment*.log
-      processors:
-        - add_kubernetes_metadata:
-            host: ${NODE_NAME}
-            matchers:
-              - logs_path:
-                  logs_path: "/var/log/containers/"
+      - type: container
+        paths:
+          - /var/log/containers/user*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+                - logs_path:
+                    logs_path: "/var/log/containers/"
+          - drop_event:
+              when:
+                not:
+                  equals:
+                    kubernetes.labels.app: "user"
 
-    # Databases and others (mongo, mysql, redis, rabbitmq)
-    - type: container
-      paths:
-        - /var/log/containers/dev-mongo*.log
-        - /var/log/containers/dev-mysql*.log
-        - /var/log/containers/dev-redis*.log
-        - /var/log/containers/dev-rabbitmq*.log
-      processors:
-        - add_kubernetes_metadata:
-            host: ${NODE_NAME}
-            matchers:
-              - logs_path:
-                  logs_path: "/var/log/containers/"
+      # Java microservice
+      - type: container
+        paths:
+          - /var/log/containers/shipping*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+                - logs_path:
+                    logs_path: "/var/log/containers/"
+          - drop_event:
+              when:
+                not:
+                  equals:
+                    kubernetes.labels.app: "shipping"
 
-   output.logstash:
-    hosts: ["logstash.logging.svc.cluster.local:5044"]
+      # Python microservice
+      - type: container
+        paths:
+          - /var/log/containers/payment*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+                - logs_path:
+                    logs_path: "/var/log/containers/"
+          - drop_event:
+              when:
+                not:
+                  equals:
+                    kubernetes.labels.app: "payment"
 
-  #   filebeat.inputs:
-  #   # CART - NodeJS
-  #   - type: container
-  #     paths:
-  #       - /var/log/containers/cart*.log
-  #     processors:
-  #       - add_kubernetes_metadata:
-  #           host: ${NODE_NAME}
-  #           matchers:
-  #             - logs_path:
-  #                 logs_path: "/var/log/containers/"
-  #       - drop_event:
-  #           when:
-  #             not:
-  #               equals:
-  #                 kubernetes.labels.app: "cart"
-  #     fields:
-  #       index: "cart-logs"
+      # Frontend (Nginx)
+      - type: container
+        paths:
+          - /var/log/containers/frontend*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+                - logs_path:
+                    logs_path: "/var/log/containers/"
+          - drop_event:
+              when:
+                not:
+                  equals:
+                    kubernetes.labels.app: "frontend"
 
-  #   # CATALOGUE - NodeJS
-  #   - type: container
-  #     paths:
-  #       - /var/log/containers/catalogue*.log
-  #     processors:
-  #       - add_kubernetes_metadata:
-  #           host: ${NODE_NAME}
-  #           matchers:
-  #             - logs_path:
-  #                 logs_path: "/var/log/containers/"
-  #       - drop_event:
-  #           when:
-  #             not:
-  #               equals:
-  #                 kubernetes.labels.app: "catalogue"
-  #     fields:
-  #       index: "catalogue-logs"
+      # Database & Messaging (Mongo, MySQL, Redis, RabbitMQ)
+      - type: container
+        paths:
+          - /var/log/containers/mongo*.log
+          - /var/log/containers/mysql*.log
+          - /var/log/containers/redis*.log
+          - /var/log/containers/rabbitmq*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+                - logs_path:
+                    logs_path: "/var/log/containers/"
+          - drop_event:
+              when:
+                not:
+                  or:
+                    - equals:
+                        kubernetes.labels.app: "mongo"
+                    - equals:
+                        kubernetes.labels.app: "mysql"
+                    - equals:
+                        kubernetes.labels.app: "redis"
+                    - equals:
+                        kubernetes.labels.app: "rabbitmq"
 
-  #   # USER - NodeJS
-  #   - type: container
-  #     paths:
-  #       - /var/log/containers/user*.log
-  #     processors:
-  #       - add_kubernetes_metadata:
-  #           host: ${NODE_NAME}
-  #           matchers:
-  #             - logs_path:
-  #                 logs_path: "/var/log/containers/"
-  #       - drop_event:
-  #           when:
-  #             not:
-  #               equals:
-  #                 kubernetes.labels.app: "user"
-  #     fields:
-  #       index: "user-logs"
-
-  #   # SHIPPING - Java
-  #   - type: container
-  #     paths:
-  #       - /var/log/containers/shipping*.log
-  #     processors:
-  #       - add_kubernetes_metadata:
-  #           host: ${NODE_NAME}
-  #           matchers:
-  #             - logs_path:
-  #                 logs_path: "/var/log/containers/"
-  #       - drop_event:
-  #           when:
-  #             not:
-  #               equals:
-  #                 kubernetes.labels.app: "shipping"
-  #     fields:
-  #       index: "shipping-logs"
-
-  #   # PAYMENT - Python
-  #   - type: container
-  #     paths:
-  #       - /var/log/containers/payment*.log
-  #     processors:
-  #       - add_kubernetes_metadata:
-  #           host: ${NODE_NAME}
-  #           matchers:
-  #             - logs_path:
-  #                 logs_path: "/var/log/containers/"
-  #       - drop_event:
-  #           when:
-  #             not:
-  #               equals:
-  #                 kubernetes.labels.app: "payment"
-  #     fields:
-  #       index: "payment-logs"
-
-  #   # FRONTEND - Nginx
-  #   - type: container
-  #     paths:
-  #       - /var/log/containers/frontend*.log
-  #     processors:
-  #       - add_kubernetes_metadata:
-  #           host: ${NODE_NAME}
-  #           matchers:
-  #             - logs_path:
-  #                 logs_path: "/var/log/containers/"
-  #       - drop_event:
-  #           when:
-  #             not:
-  #               equals:
-  #                 kubernetes.labels.app: "frontend"
-  #     fields:
-  #       index: "frontend-logs"
-
-  #   # DATABASES / BROKERS (Mongo, MySQL, Redis, RabbitMQ)
-  #   - type: container
-  #     paths:
-  #       - /var/log/containers/mongo*.log
-  #       - /var/log/containers/mysql*.log
-  #       - /var/log/containers/redis*.log
-  #       - /var/log/containers/rabbitmq*.log
-  #     processors:
-  #       - add_kubernetes_metadata:
-  #           host: ${NODE_NAME}
-  #           matchers:
-  #             - logs_path:
-  #                 logs_path: "/var/log/containers/"
-  #     fields:
-  #       index: "infrastructure-logs"
-
-  #   output.logstash:
-  #     hosts: ["logstash.logging.svc.cluster.local:5044"]
-  #     index: '%{[fields.index]}-%{+yyyy.MM.dd}'  # Dynamically uses microservice index
+    output.logstash:
+      hosts: ["logstash.logging.svc.cluster.local:5044"]
+      ssl.enabled: false
 
 ---
 apiVersion: apps/v1
