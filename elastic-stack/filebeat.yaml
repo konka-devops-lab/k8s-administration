@@ -38,19 +38,24 @@ metadata:
 data:
   filebeat.yml: |
     filebeat.inputs:
-    - type: container
-      enabled: true
-      paths:
-        - /var/log/containers/*.log
-      processors:
-        - add_kubernetes_metadata:
-            host: ${NODE_NAME}
-            matchers:
-              - logs_path:
-                  logs_path: "/var/log/containers/"
+      - type: container
+        enabled: true
+        paths:
+          - /var/log/containers/*.log   # Collect all container logs
+        processors:
+          - add_kubernetes_metadata:
+              in_cluster: true          # Auto adds pod, namespace, labels, etc.
+
     output.logstash:
       hosts: ["logstash.logging.svc.cluster.local:5044"]
 
+    logging.level: info
+    logging.to_files: true
+    logging.files:
+      path: /var/log/filebeat
+      name: filebeat.log
+      keepfiles: 7
+      permissions: 0644
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -74,6 +79,11 @@ spec:
       - name: filebeat
         image: docker.elastic.co/beats/filebeat:8.15.0
         args: ["-c", "/etc/filebeat.yml", "-e"]
+        env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
         volumeMounts:
         - name: config
           mountPath: /etc/filebeat.yml
