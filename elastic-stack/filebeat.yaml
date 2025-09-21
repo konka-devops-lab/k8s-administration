@@ -11,11 +11,12 @@ metadata:
   name: filebeat
 rules:
 - apiGroups: [""]
-  resources: ["pods", "namespaces"]
+  resources: ["pods", "namespaces", "nodes"]
   verbs: ["get", "watch", "list"]
 - apiGroups: ["apps"]
   resources: ["deployments", "statefulsets", "replicasets"]
   verbs: ["get", "watch", "list"]
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
