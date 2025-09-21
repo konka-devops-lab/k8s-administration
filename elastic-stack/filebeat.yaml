@@ -67,6 +67,8 @@ data:
     - type: container
       paths:
         - /var/log/containers/*.log
+      scan_frequency: 30s
+      close_inactive: 5m
       processors:
         - add_kubernetes_metadata:
             host: ${NODE_NAME}
@@ -78,6 +80,8 @@ data:
       paths:
         - /var/lib/docker/containers/*/*.log
       symlinks: true
+      scan_frequency: 30s
+      close_inactive: 5m
       processors:
         - add_kubernetes_metadata:
             host: ${NODE_NAME}
@@ -194,19 +198,26 @@ data:
                 environment: "dev"
                 tier: "database"
 
-    # Kubernetes autodiscovery for dynamic pods
+    # Kubernetes autodiscovery for dynamic pods - TARGET INSTANA NAMESPACE
     filebeat.autodiscover:
       providers:
         - type: kubernetes
           node: ${NODE_NAME}
+          include_labels: ["app"]
+          # Focus on instana namespace specifically
           templates:
             - condition:
-                equals:
-                  kubernetes.labels.tier: "application"
+                and:
+                  - equals:
+                      kubernetes.namespace: "instana"
+                  - equals:
+                      kubernetes.labels.tier: "application"
               config:
                 - type: container
                   paths:
                     - /var/log/containers/*${data.kubernetes.container.id}.log
+                  scan_frequency: 30s
+                  close_inactive: 5m
                   processors:
                     - add_kubernetes_metadata: ~
                     - add_fields:
@@ -215,12 +226,17 @@ data:
                           tier: "application"
 
             - condition:
-                equals:
-                  kubernetes.labels.tier: "database"
+                and:
+                  - equals:
+                      kubernetes.namespace: "instana"
+                  - equals:
+                      kubernetes.labels.tier: "database"
               config:
                 - type: container
                   paths:
                     - /var/log/containers/*${data.kubernetes.container.id}.log
+                  scan_frequency: 30s
+                  close_inactive: 5m
                   processors:
                     - add_kubernetes_metadata: ~
                     - add_fields:
@@ -228,16 +244,50 @@ data:
                           environment: "dev"
                           tier: "database"
 
+            # Fallback: catch all containers in instana namespace
+            - condition:
+                equals:
+                  kubernetes.namespace: "instana"
+              config:
+                - type: container
+                  paths:
+                    - /var/log/containers/*${data.kubernetes.container.id}.log
+                  scan_frequency: 30s
+                  close_inactive: 5m
+                  processors:
+                    - add_kubernetes_metadata: ~
+                    - add_fields:
+                        fields:
+                          environment: "dev"
+
+    # Queue settings to handle backpressure
+    queue:
+      mem:
+        events: 2048
+        flush:
+          min_events: 512
+          timeout: 5s
+
     output.logstash:
       hosts: ["logstash.logging.svc.cluster.local:5044"]
       ssl.enabled: false
+      bulk_max_size: 512
+      timeout: 30
+
+    # Setup
+    setup.template:
+      name: "logs"
+      pattern: "logs-*"
+
+    setup.ilm:
+      enabled: false
 
     logging.level: info
     logging.to_files: true
     logging.files:
       path: /var/log/filebeat
       name: filebeat
-      keepfiles: 7
+      keepfiles: 3
       permissions: 0644
 ---
 apiVersion: apps/v1
