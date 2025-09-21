@@ -49,14 +49,6 @@ data:
 
     output.logstash:
       hosts: ["logstash.logging.svc.cluster.local:5044"]
-
-    logging.level: info
-    logging.to_files: true
-    logging.files:
-      path: /var/log/filebeat
-      name: filebeat.log
-      keepfiles: 7
-      permissions: 0644
 ---
 apiVersion: apps/v1
 kind: DaemonSet
