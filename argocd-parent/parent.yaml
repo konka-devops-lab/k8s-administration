@@ -1,3 +1,4 @@
+---
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -12,8 +13,7 @@ spec:
           - path: namespaces/*.yaml
           - path: rbac/*.yaml
           - path: storage-classes/*.yaml
-          - path: metrics-server/*.yaml
-          
+          - path: metrics-server/*.yaml       
   template:
     metadata:
       name: '{{path.basename}}'
@@ -22,7 +22,7 @@ spec:
       source:
         repoURL: https://github.com/konka-devops-lab/k8s-administration.git
         targetRevision: main
-        path: '{{path}}'  # This is the critical missing line
+        path: '{{path}}'
       destination:
         server: https://kubernetes.default.svc
         namespace: argocd
@@ -32,3 +32,19 @@ spec:
           selfHeal: true
         syncOptions:
         - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: instana
+  namespace: argocd
+spec:
+  description: Instana project
+  sourceRepos:
+    - 'https://github.com/konka-devops-lab/instana-helmcharts.git'
+  destinations:
+    - namespace: '*'
+      server: '*'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
