@@ -67,228 +67,244 @@ data:
     - type: container
       paths:
         - /var/log/containers/*.log
-      scan_frequency: 30s
-      close_inactive: 5m
       processors:
         - add_kubernetes_metadata:
             host: ${NODE_NAME}
             matchers:
             - logs_path:
                 logs_path: "/var/log/containers/"
-
-    - type: log
-      paths:
-        - /var/lib/docker/containers/*/*.log
-      symlinks: true
-      scan_frequency: 30s
-      close_inactive: 5m
-      processors:
-        - add_kubernetes_metadata:
-            host: ${NODE_NAME}
-
-    # Application-specific parsing
     processors:
-      - add_cloud_metadata: ~
-      - add_host_metadata: ~
-      
-      # Add custom fields for microservices
-      - if:
-          equals:
-            kubernetes.labels.app: "catalogue"
-        then:
-          - add_fields:
-              fields:
-                service: "catalogue"
-                language: "nodejs"
-                environment: "dev"
-                tier: "application"
-      
-      - if:
-          equals:
-            kubernetes.labels.app: "user"
-        then:
-          - add_fields:
-              fields:
-                service: "user"
-                language: "nodejs"
-                environment: "dev"
-                tier: "application"
-      
-      - if:
-          equals:
-            kubernetes.labels.app: "cart"
-        then:
-          - add_fields:
-              fields:
-                service: "cart"
-                language: "nodejs"
-                environment: "dev"
-                tier: "application"
-      
-      - if:
-          equals:
-            kubernetes.labels.app: "shipping"
-        then:
-          - add_fields:
-              fields:
-                service: "shipping"
-                language: "java"
-                environment: "dev"
-                tier: "application"
-      
-      - if:
-          equals:
-            kubernetes.labels.app: "payment"
-        then:
-          - add_fields:
-              fields:
-                service: "payment"
-                language: "python"
-                environment: "dev"
-                tier: "application"
-      
-      - if:
-          equals:
-            kubernetes.labels.app: "frontend"
-        then:
-          - add_fields:
-              fields:
-                service: "frontend"
-                environment: "dev"
-                tier: "application"
-      
-      # Database services
-      - if:
-          equals:
-            kubernetes.labels.app: "mysql"
-        then:
-          - add_fields:
-              fields:
-                service: "mysql"
-                environment: "dev"
-                tier: "database"
-      
-      - if:
-          equals:
-            kubernetes.labels.app: "mongo"
-        then:
-          - add_fields:
-              fields:
-                service: "mongo"
-                environment: "dev"
-                tier: "database"
-      
-      - if:
-          equals:
-            kubernetes.labels.app: "redis"
-        then:
-          - add_fields:
-              fields:
-                service: "redis"
-                environment: "dev"
-                tier: "database"
-      
-      - if:
-          equals:
-            kubernetes.labels.app: "rabbitmq"
-        then:
-          - add_fields:
-              fields:
-                service: "rabbitmq"
-                environment: "dev"
-                tier: "database"
-
-    # Kubernetes autodiscovery for dynamic pods - TARGET INSTANA NAMESPACE
-    filebeat.autodiscover:
-      providers:
-        - type: kubernetes
-          node: ${NODE_NAME}
-          include_labels: ["app"]
-          # Focus on instana namespace specifically
-          templates:
-            - condition:
-                and:
-                  - equals:
-                      kubernetes.namespace: "instana"
-                  - equals:
-                      kubernetes.labels.tier: "application"
-              config:
-                - type: container
-                  paths:
-                    - /var/log/containers/*${data.kubernetes.container.id}.log
-                  scan_frequency: 30s
-                  close_inactive: 5m
-                  processors:
-                    - add_kubernetes_metadata: ~
-                    - add_fields:
-                        fields:
-                          environment: "dev"
-                          tier: "application"
-
-            - condition:
-                and:
-                  - equals:
-                      kubernetes.namespace: "instana"
-                  - equals:
-                      kubernetes.labels.tier: "database"
-              config:
-                - type: container
-                  paths:
-                    - /var/log/containers/*${data.kubernetes.container.id}.log
-                  scan_frequency: 30s
-                  close_inactive: 5m
-                  processors:
-                    - add_kubernetes_metadata: ~
-                    - add_fields:
-                        fields:
-                          environment: "dev"
-                          tier: "database"
-
-            # Fallback: catch all containers in instana namespace
-            - condition:
-                equals:
-                  kubernetes.namespace: "instana"
-              config:
-                - type: container
-                  paths:
-                    - /var/log/containers/*${data.kubernetes.container.id}.log
-                  scan_frequency: 30s
-                  close_inactive: 5m
-                  processors:
-                    - add_kubernetes_metadata: ~
-                    - add_fields:
-                        fields:
-                          environment: "dev"
-
-    # Queue settings to handle backpressure
-    queue:
-      mem:
-        events: 2048
-        flush:
-          min_events: 512
-          timeout: 5s
-
+      - add_cloud_metadata:
+      - add_host_metadata:
     output.logstash:
       hosts: ["logstash.logging.svc.cluster.local:5044"]
-      ssl.enabled: false
-      bulk_max_size: 512
-      timeout: 30
 
-    # Setup
-    setup.template:
-      name: "logs"
-      pattern: "logs-*"
+    # filebeat.inputs:
+    # - type: container
+    #   paths:
+    #     - /var/log/containers/*.log
+    #   scan_frequency: 30s
+    #   close_inactive: 5m
+    #   processors:
+    #     - add_kubernetes_metadata:
+    #         host: ${NODE_NAME}
+    #         matchers:
+    #         - logs_path:
+    #             logs_path: "/var/log/containers/"
 
-    setup.ilm:
-      enabled: false
+    # - type: log
+    #   paths:
+    #     - /var/lib/docker/containers/*/*.log
+    #   symlinks: true
+    #   scan_frequency: 30s
+    #   close_inactive: 5m
+    #   processors:
+    #     - add_kubernetes_metadata:
+    #         host: ${NODE_NAME}
 
-    logging.level: info
-    logging.to_files: true
-    logging.files:
-      path: /var/log/filebeat
-      name: filebeat
-      keepfiles: 3
-      permissions: 0644
+    # # Application-specific parsing
+    # processors:
+    #   - add_cloud_metadata: ~
+    #   - add_host_metadata: ~
+      
+    #   # Add custom fields for microservices
+    #   - if:
+    #       equals:
+    #         kubernetes.labels.app: "catalogue"
+    #     then:
+    #       - add_fields:
+    #           fields:
+    #             service: "catalogue"
+    #             language: "nodejs"
+    #             environment: "dev"
+    #             tier: "application"
+      
+    #   - if:
+    #       equals:
+    #         kubernetes.labels.app: "user"
+    #     then:
+    #       - add_fields:
+    #           fields:
+    #             service: "user"
+    #             language: "nodejs"
+    #             environment: "dev"
+    #             tier: "application"
+      
+    #   - if:
+    #       equals:
+    #         kubernetes.labels.app: "cart"
+    #     then:
+    #       - add_fields:
+    #           fields:
+    #             service: "cart"
+    #             language: "nodejs"
+    #             environment: "dev"
+    #             tier: "application"
+      
+    #   - if:
+    #       equals:
+    #         kubernetes.labels.app: "shipping"
+    #     then:
+    #       - add_fields:
+    #           fields:
+    #             service: "shipping"
+    #             language: "java"
+    #             environment: "dev"
+    #             tier: "application"
+      
+    #   - if:
+    #       equals:
+    #         kubernetes.labels.app: "payment"
+    #     then:
+    #       - add_fields:
+    #           fields:
+    #             service: "payment"
+    #             language: "python"
+    #             environment: "dev"
+    #             tier: "application"
+      
+    #   - if:
+    #       equals:
+    #         kubernetes.labels.app: "frontend"
+    #     then:
+    #       - add_fields:
+    #           fields:
+    #             service: "frontend"
+    #             environment: "dev"
+    #             tier: "application"
+      
+    #   # Database services
+    #   - if:
+    #       equals:
+    #         kubernetes.labels.app: "mysql"
+    #     then:
+    #       - add_fields:
+    #           fields:
+    #             service: "mysql"
+    #             environment: "dev"
+    #             tier: "database"
+      
+    #   - if:
+    #       equals:
+    #         kubernetes.labels.app: "mongo"
+    #     then:
+    #       - add_fields:
+    #           fields:
+    #             service: "mongo"
+    #             environment: "dev"
+    #             tier: "database"
+      
+    #   - if:
+    #       equals:
+    #         kubernetes.labels.app: "redis"
+    #     then:
+    #       - add_fields:
+    #           fields:
+    #             service: "redis"
+    #             environment: "dev"
+    #             tier: "database"
+      
+    #   - if:
+    #       equals:
+    #         kubernetes.labels.app: "rabbitmq"
+    #     then:
+    #       - add_fields:
+    #           fields:
+    #             service: "rabbitmq"
+    #             environment: "dev"
+    #             tier: "database"
+
+    # # Kubernetes autodiscovery for dynamic pods - TARGET INSTANA NAMESPACE
+    # filebeat.autodiscover:
+    #   providers:
+    #     - type: kubernetes
+    #       node: ${NODE_NAME}
+    #       include_labels: ["app"]
+    #       # Focus on instana namespace specifically
+    #       templates:
+    #         - condition:
+    #             and:
+    #               - equals:
+    #                   kubernetes.namespace: "instana"
+    #               - equals:
+    #                   kubernetes.labels.tier: "application"
+    #           config:
+    #             - type: container
+    #               paths:
+    #                 - /var/log/containers/*${data.kubernetes.container.id}.log
+    #               scan_frequency: 30s
+    #               close_inactive: 5m
+    #               processors:
+    #                 - add_kubernetes_metadata: ~
+    #                 - add_fields:
+    #                     fields:
+    #                       environment: "dev"
+    #                       tier: "application"
+
+    #         - condition:
+    #             and:
+    #               - equals:
+    #                   kubernetes.namespace: "instana"
+    #               - equals:
+    #                   kubernetes.labels.tier: "database"
+    #           config:
+    #             - type: container
+    #               paths:
+    #                 - /var/log/containers/*${data.kubernetes.container.id}.log
+    #               scan_frequency: 30s
+    #               close_inactive: 5m
+    #               processors:
+    #                 - add_kubernetes_metadata: ~
+    #                 - add_fields:
+    #                     fields:
+    #                       environment: "dev"
+    #                       tier: "database"
+
+    #         # Fallback: catch all containers in instana namespace
+    #         - condition:
+    #             equals:
+    #               kubernetes.namespace: "instana"
+    #           config:
+    #             - type: container
+    #               paths:
+    #                 - /var/log/containers/*${data.kubernetes.container.id}.log
+    #               scan_frequency: 30s
+    #               close_inactive: 5m
+    #               processors:
+    #                 - add_kubernetes_metadata: ~
+    #                 - add_fields:
+    #                     fields:
+    #                       environment: "dev"
+
+    # # Queue settings to handle backpressure
+    # queue:
+    #   mem:
+    #     events: 2048
+    #     flush:
+    #       min_events: 512
+    #       timeout: 5s
+
+    # output.logstash:
+    #   hosts: ["logstash.logging.svc.cluster.local:5044"]
+    #   ssl.enabled: false
+    #   bulk_max_size: 512
+    #   timeout: 30
+
+    # # Setup
+    # setup.template:
+    #   name: "logs"
+    #   pattern: "logs-*"
+
+    # setup.ilm:
+    #   enabled: false
+
+    # logging.level: info
+    # logging.to_files: true
+    # logging.files:
+    #   path: /var/log/filebeat
+    #   name: filebeat
+    #   keepfiles: 3
+    #   permissions: 0644
 ---
 apiVersion: apps/v1
 kind: DaemonSet
