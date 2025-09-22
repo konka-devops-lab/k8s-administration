@@ -71,13 +71,38 @@ data:
         - add_kubernetes_metadata:
             host: ${NODE_NAME}
             matchers:
-            - logs_path:
-                logs_path: "/var/log/containers/"
-    processors:
-      - add_cloud_metadata:
-      - add_host_metadata:
-    output.logstash:
-      hosts: ["logstash.logging.svc.cluster.local:5044"]
+              - logs_path:
+                  logs_path: "/var/log/containers/"
+
+        # Drop logs that are NOT from the instana namespace
+        - drop_event:
+            when:
+              not:
+                equals:
+                  kubernetes.namespace: "instana"
+
+  processors:
+    - add_cloud_metadata:
+    - add_host_metadata:
+
+  output.logstash:
+    hosts: ["logstash.logging.svc.cluster.local:5044"]
+
+    # filebeat.inputs:
+    # - type: container
+    #   paths:
+    #     - /var/log/containers/*.log
+    #   processors:
+    #     - add_kubernetes_metadata:
+    #         host: ${NODE_NAME}
+    #         matchers:
+    #         - logs_path:
+    #             logs_path: "/var/log/containers/"
+    # processors:
+    #   - add_cloud_metadata:
+    #   - add_host_metadata:
+    # output.logstash:
+    #   hosts: ["logstash.logging.svc.cluster.local:5044"]
 
     # filebeat.inputs:
     # - type: container
