@@ -164,3 +164,6 @@ spec:
         hostPath:
           path: /var/lib/filebeat-data
           type: DirectoryOrCreate
+# Commands
+# k exec -it filebeat-52xbt -- ls /var/log/containers
+#  k exec -it filebeat-52xbt -- cat /usr/share/filebeat/filebeat.yml
