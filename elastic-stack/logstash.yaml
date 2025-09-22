@@ -17,15 +17,34 @@ data:
     }
 
     filter {
-      # You can add filters like grok, json parsing here if needed later
+      # Extract service from container filename
+      dissect {
+        mapping => { "[@metadata][filename]" => "%{namespace}_%{service}-%{rest}" }
+        target => "service_info"
+      }
+      mutate {
+        add_field => { "service" => "%{service}" }
+      }
+
+      # Extract HTTP method, endpoint, status from log message
+      grok {
+        match => { "message" => "%{WORD:method} %{URIPATH:endpoint} %{NUMBER:status}" }
+        # Optional: If your log format is different, adjust the pattern
+      }
+
+      # Convert status to integer for aggregations
+      mutate {
+        convert => { "status" => "integer" }
+      }
     }
 
     output {
       elasticsearch {
         hosts => ["http://elasticsearch.logging.svc.cluster.local:9200"]
-        index => "filebeat-%{+YYYY.MM.dd}"
+        index => "app-logs-%{+YYYY.MM.dd}"
       }
     }
+
 ---
 apiVersion: apps/v1
 kind: Deployment
