@@ -11,98 +11,119 @@ data:
     
   logstash.conf: |
     input {
-      beats {
-        port => 5044
-        host => "0.0.0.0"
-        ssl => false
+      file {
+        path => "/var/log/*.log"
+        start_position => "beginning"
       }
     }
 
     filter {
-      # Parse JSON logs (common in structured logging)
-      if [message] =~ /^{.*}$/ {
-        json {
-          source => "message"
-          target => "json_content"
-        }
-      }
-
-      # Grok patterns for different log formats
+      # Example filter - you can modify as needed
       grok {
-        match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:loglevel} %{GREEDYDATA:message}" }
-        overwrite => [ "message" ]
-      }
-
-      # Service-specific parsing
-      if [service] == "catalogue" or [service] == "user" or [service] == "cart" {
-        # Node.js application parsing
-        grok {
-          match => { "message" => "\[%{TIMESTAMP_ISO8601:timestamp}\] %{WORD:loglevel}: %{GREEDYDATA:log_message}" }
-        }
-      }
-
-      if [service] == "shipping" {
-        # Java application parsing
-        grok {
-          match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:loglevel} \[%{DATA:thread}\] %{DATA:class} - %{GREEDYDATA:log_message}" }
-        }
-      }
-
-      if [service] == "payment" {
-        # Python application parsing
-        grok {
-          match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} - %{WORD:loglevel} - %{DATA:module} - %{GREEDYDATA:log_message}" }
-        }
-      }
-
-      # Database log parsing
-      if [service] == "mysql" {
-        grok {
-          match => { "message" => "%{NUMBER:timestamp} \[%{WORD:level}\] %{GREEDYDATA:message}" }
-        }
-      }
-
-      if [service] == "mongo" {
-        grok {
-          match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{WORD:component} %{LOGLEVEL:loglevel} %{GREEDYDATA:message}" }
-        }
-      }
-
-      # Add timestamp from log message if available
-      date {
-        match => [ "timestamp", "ISO8601", "YYYY-MM-dd HH:mm:ss,SSS", "YYYY-MM-dd HH:mm:ss" ]
-        target => "@timestamp"
-        timezone => "UTC"
-      }
-
-      # Remove temporary fields
-      mutate {
-        remove_field => [ "timestamp", "json_content" ]
-      }
-
-      # Add geoip if relevant
-      if [clientip] {
-        geoip {
-          source => "clientip"
-          target => "geoip"
-        }
+        match => { "message" => "%{COMBINEDAPACHELOG}" }
       }
     }
 
     output {
       elasticsearch {
         hosts => ["http://elasticsearch.logging.svc.cluster.local:9200"]
-        index => "logs-%{[service]}-%{+YYYY.MM.dd}"
-        user => "elastic"
-        password => "${ELASTIC_PASSWORD}"
-        ssl => false
+        index => "logs-%{+YYYY.MM.dd}"
       }
-
-      # Fallback output (for debugging)
-      stdout {
-        codec => rubydebug
-      }
+      stdout { codec => rubydebug }
     }
+    # input {
+    #   beats {
+    #     port => 5044
+    #     host => "0.0.0.0"
+    #     ssl => false
+    #   }
+    # }
+
+    # filter {
+    #   # Parse JSON logs (common in structured logging)
+    #   if [message] =~ /^{.*}$/ {
+    #     json {
+    #       source => "message"
+    #       target => "json_content"
+    #     }
+    #   }
+
+    #   # Grok patterns for different log formats
+    #   grok {
+    #     match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:loglevel} %{GREEDYDATA:message}" }
+    #     overwrite => [ "message" ]
+    #   }
+
+    #   # Service-specific parsing
+    #   if [service] == "catalogue" or [service] == "user" or [service] == "cart" {
+    #     # Node.js application parsing
+    #     grok {
+    #       match => { "message" => "\[%{TIMESTAMP_ISO8601:timestamp}\] %{WORD:loglevel}: %{GREEDYDATA:log_message}" }
+    #     }
+    #   }
+
+    #   if [service] == "shipping" {
+    #     # Java application parsing
+    #     grok {
+    #       match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:loglevel} \[%{DATA:thread}\] %{DATA:class} - %{GREEDYDATA:log_message}" }
+    #     }
+    #   }
+
+    #   if [service] == "payment" {
+    #     # Python application parsing
+    #     grok {
+    #       match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} - %{WORD:loglevel} - %{DATA:module} - %{GREEDYDATA:log_message}" }
+    #     }
+    #   }
+
+    #   # Database log parsing
+    #   if [service] == "mysql" {
+    #     grok {
+    #       match => { "message" => "%{NUMBER:timestamp} \[%{WORD:level}\] %{GREEDYDATA:message}" }
+    #     }
+    #   }
+
+    #   if [service] == "mongo" {
+    #     grok {
+    #       match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{WORD:component} %{LOGLEVEL:loglevel} %{GREEDYDATA:message}" }
+    #     }
+    #   }
+
+    #   # Add timestamp from log message if available
+    #   date {
+    #     match => [ "timestamp", "ISO8601", "YYYY-MM-dd HH:mm:ss,SSS", "YYYY-MM-dd HH:mm:ss" ]
+    #     target => "@timestamp"
+    #     timezone => "UTC"
+    #   }
+
+    #   # Remove temporary fields
+    #   mutate {
+    #     remove_field => [ "timestamp", "json_content" ]
+    #   }
+
+    #   # Add geoip if relevant
+    #   if [clientip] {
+    #     geoip {
+    #       source => "clientip"
+    #       target => "geoip"
+    #     }
+    #   }
+    # }
+
+    # output {
+    #   elasticsearch {
+    #     hosts => ["http://elasticsearch.logging.svc.cluster.local:9200"]
+    #     index => "logs-%{[service]}-%{+YYYY.MM.dd}"
+    #     user => "elastic"
+    #     password => "${ELASTIC_PASSWORD}"
+    #     ssl => false
+    #   }
+
+    #   # Fallback output (for debugging)
+    #   stdout {
+    #     codec => rubydebug
+    #   }
+    # }
 ---
 apiVersion: apps/v1
 kind: Deployment
