@@ -1,16 +1,75 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cart
+  name: elasticsearch
   namespace: argocd
 spec:
   project: elastic-stack
   source:
     repoURL: 'https://github.com/konka-devops-lab/k8s-administration.git'
     targetRevision: HEAD                                        
-    path: elastic-stack
-    directory:
-      recurse: true
+    path: elastic-stack/elasticsearch.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: logging                
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: logstash
+  namespace: argocd
+spec:
+  project: elastic-stack
+  source:
+    repoURL: 'https://github.com/konka-devops-lab/k8s-administration.git'
+    targetRevision: HEAD                                        
+    path: elastic-stack/logstash.yaml
+    # directory:
+    #   recurse: true
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: logging                
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: filebeat
+  namespace: argocd
+spec:
+  project: elastic-stack
+  source:
+    repoURL: 'https://github.com/konka-devops-lab/k8s-administration.git'
+    targetRevision: HEAD                                        
+    path: elastic-stack/filebeat.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: logging                
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kibana
+  namespace: argocd
+spec:
+  project: elastic-stack
+  source:
+    repoURL: 'https://github.com/konka-devops-lab/k8s-administration.git'
+    targetRevision: HEAD                                        
+    path: elastic-stack/kibana.yaml
+    # directory:
+    #   recurse: true
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: logging                
