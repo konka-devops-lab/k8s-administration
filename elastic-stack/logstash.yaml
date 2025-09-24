@@ -20,10 +20,10 @@ data:
       # Extract service from container filename
       dissect {
         mapping => { "[@metadata][filename]" => "%{namespace}_%{service}-%{rest}" }
-        target => "service_info"
       }
       mutate {
-        add_field => { "service" => "%{service}" }
+        add_field => { "service_info_namespace" => "%{namespace}" }
+        add_field => { "service_info_service" => "%{service}" }
       }
 
       # Extract HTTP method, endpoint, status from log message
