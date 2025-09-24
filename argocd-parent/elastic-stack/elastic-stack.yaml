@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cart
+  namespace: argocd
+spec:
+  project: elastic-stack
+  source:
+    repoURL: 'https://github.com/konka-devops-lab/k8s-administration.git'
+    targetRevision: HEAD                                        
+    path: elastic-stack
+    directory:
+      recurse: true
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: logging                
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
