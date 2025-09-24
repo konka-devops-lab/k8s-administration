@@ -28,8 +28,8 @@ data:
         }
       }
 
-      # Identify health check requests early
-      if [message] =~ /health|healthcheck|ready|live|probe|status/i {
+      # Identify health check requests early - FIXED SYNTAX
+      if [message] =~ /health|healthcheck|ready|live|probe|status/ {
         mutate {
           add_field => { "is_health_check" => "true" }
         }
@@ -43,7 +43,7 @@ data:
         }
         
         # Also check parsed JSON for health indicators
-        if [parsed_message][msg] =~ /health|ready|live/i or [parsed_message][endpoint] =~ /health|ready|live/ {
+        if [parsed_message][msg] =~ /health|ready|live/ or [parsed_message][endpoint] =~ /health|ready|live/ {
           mutate {
             add_field => { "is_health_check" => "true" }
           }
@@ -53,12 +53,14 @@ data:
       # Service-specific filters with health check integration
       if [kubernetes][container][name] == "mongo" {
         # MongoDB JSON logs
-        grok {
-          match => { 
-            "[parsed_message][msg]" => [
-              "%{WORD:mongo_operation} %{WORD:mongo_operation_type}",
-              "%{GREEDYDATA:mongo_message}"
-            ]
+        if [parsed_message] {
+          grok {
+            match => { 
+              "[parsed_message][msg]" => [
+                "%{WORD:mongo_operation} %{WORD:mongo_operation_type}",
+                "%{GREEDYDATA:mongo_message}"
+              ]
+            }
           }
         }
       }
@@ -81,7 +83,7 @@ data:
           match => { 
             "message" => [
               "%{NUMBER:timestamp} \[%{NUMBER}\] %{GREEDYDATA:redis_message}",
-              "%{REDISTIMESTAMP:timestamp} %{WORD:level} %{GREEDYDATA:redis_message}"
+              "%{MONTHDAY} %{MONTH} %{HOUR}:%{MINUTE}:%{SECOND}\.%{NUMBER} %{WORD:level} %{GREEDYDATA:redis_message}"
             ]
           }
         }
@@ -106,7 +108,7 @@ data:
           match => { 
             "message" => [
               # HTTP request logs
-              "%{IP:client_ip} - - \[%{HTTPDATE:timestamp}\] \"%{WORD:http_method} %{URIPATHPARAM:endpoint} HTTP/%{NUMBER:http_version}\" %{NUMBER:response_code} %{NUMBER:response_size} \"%{DATA:referrer}\" \"%{DATA:user_agent}\"",
+              "%{IP:client_ip} - - \[%{HTTPDATE:timestamp}\] \"%{WORD:http_method} %{URIPATHPARAM:endpoint} HTTP/%{NUMBER:http_version}\" %{NUMBER:response_code} %{NUMBER:response_size}",
               # JSON formatted logs
               "\"method\":\"%{WORD:http_method}\".*\"url\":\"%{URIPATHPARAM:endpoint}\".*\"status\":%{NUMBER:response_code}",
               # Simple message pattern
@@ -193,7 +195,7 @@ data:
           match => { 
             "message" => [
               # Nginx combined format
-              "%{IPORHOST:client_ip} - %{USER:ident} \[%{HTTPDATE:timestamp}\] \"%{WORD:http_method} %{URIPATHPARAM:endpoint} HTTP/%{NUMBER:http_version}\" %{NUMBER:response_code} %{NUMBER:response_size} \"%{DATA:referrer}\" \"%{DATA:user_agent}\" \"%{DATA:forwarded_for}\"",
+              "%{IPORHOST:client_ip} - %{USER:ident} \[%{HTTPDATE:timestamp}\] \"%{WORD:http_method} %{URIPATHPARAM:endpoint} HTTP/%{NUMBER:http_version}\" %{NUMBER:response_code} %{NUMBER:response_size}",
               # Nginx main format
               "%{IPORHOST:client_ip} - - \[%{HTTPDATE:timestamp}\] \"%{WORD:http_method} %{URIPATHPARAM:endpoint} HTTP/%{NUMBER:http_version}\" %{NUMBER:response_code} %{NUMBER:response_size}",
               # Error logs
@@ -232,7 +234,6 @@ data:
         
         mutate {
           add_field => { 
-            "[@metadata][health_check]" => "true"
             "metric_type" => "health_check"
           }
         }
@@ -248,7 +249,6 @@ data:
           # Use existing health_status if available
           mutate { 
             lowercase => [ "health_status" ]
-            add_field => { "health_status_normalized" => "%{health_status}" }
           }
         }
       }
@@ -286,19 +286,9 @@ data:
         index => "microservice-logs-%{+YYYY.MM.dd}"
       }
       
-      # Separate index for health checks (optional - for focused monitoring)
-      if [is_health_check] == "true" {
-        elasticsearch {
-          hosts => ["http://elasticsearch.logging.svc.cluster.local:9200"]
-          index => "healthcheck-metrics-%{+YYYY.MM.dd}"
-          document_id => "%{service_name}-%{+YYYY.MM.dd}-%{sequence}"
-        }
-      }
-      
       # Optional: Debug output
       stdout { 
         codec => rubydebug 
-        id => "console_output"
       }
     }
     
