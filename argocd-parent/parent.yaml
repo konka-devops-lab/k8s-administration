@@ -48,3 +48,19 @@ spec:
   clusterResourceWhitelist:
     - group: '*'
       kind: '*'
+---
+piVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: instana
+  namespace: argocd
+spec:
+  description: Instana project
+  sourceRepos:
+    - 'https://github.com/konka-devops-lab/k8s-administration.git'
+  destinations:
+    - namespace: '*'
+      server: '*'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
