@@ -17,31 +17,197 @@ data:
     }
 
     filter {
-      # Extract service from container filename
-      dissect {
-        mapping => { "[@metadata][filename]" => "%{namespace}_%{service}-%{rest}" }
-      }
-      mutate {
-        add_field => { "service_info_namespace" => "%{namespace}" }
-        add_field => { "service_info_service" => "%{service}" }
-      }
-
-      # Extract HTTP method, endpoint, status from log message
-      grok {
-        match => { "message" => "%{WORD:method} %{URIPATH:endpoint} %{NUMBER:status}" }
-        # Optional: If your log format is different, adjust the pattern
+      # Add service identification based on container name
+      if [kubernetes][container][name] {
+        mutate {
+          add_field => { 
+            "service_name" => "%{[kubernetes][container][name]}"
+            "service_namespace" => "%{[kubernetes][namespace]}"
+            "service_pod" => "%{[kubernetes][pod][name]}"
+          }
+        }
       }
 
-      # Convert status to integer for aggregations
+      # Parse JSON messages (common for structured logs)
+      if [message] =~ /^{.*}$/ {
+        json {
+          source => "message"
+          target => "parsed_message"
+        }
+      }
+
+      # Service-specific filters
+      if [kubernetes][container][name] == "mongo" {
+        # MongoDB JSON logs are already parsed above
+        grok {
+          match => { 
+            "[parsed_message][msg]" => [
+              "%{WORD:mongo_operation} %{WORD:mongo_operation_type}",
+              "%{GREEDYDATA:mongo_message}"
+            ]
+          }
+        }
+      }
+
+      if [kubernetes][container][name] == "mysql" {
+        # MySQL error log pattern
+        grok {
+          match => { 
+            "message" => [
+              "%{NUMBER:timestamp} \[%{WORD:severity}\] %{GREEDYDATA:mysql_message}",
+              "%{TIMESTAMP_ISO8601:timestamp} %{NUMBER:thread_id} \[%{WORD:severity}\] %{GREEDYDATA:mysql_message}"
+            ]
+          }
+        }
+      }
+
+      if [kubernetes][container][name] == "redis" {
+        # Redis log pattern
+        grok {
+          match => { 
+            "message" => [
+              "%{NUMBER:timestamp} \[%{NUMBER}\] %{GREEDYDATA:redis_message}",
+              "%{REDISTIMESTAMP:timestamp} %{WORD:level} %{GREEDYDATA:redis_message}"
+            ]
+          }
+        }
+      }
+
+      if [kubernetes][container][name] == "rabbitmq" {
+        # RabbitMQ log pattern
+        grok {
+          match => { 
+            "message" => [
+              "=%{WORD:rabbitmq_level}=== %{GREEDYDATA:rabbitmq_message}",
+              "%{TIMESTAMP_ISO8601:timestamp} \[%{WORD:level}\] %{GREEDYDATA:rabbitmq_message}"
+            ]
+          }
+        }
+      }
+
+      # Node.js Applications (catalogue, cart, user)
+      if [kubernetes][container][name] =~ /catalogue|cart|user/ {
+        # Node.js/Express logs
+        grok {
+          match => { 
+            "message" => [
+              # HTTP request logs
+              "%{IP:client_ip} - - \[%{HTTPDATE:timestamp}\] \"%{WORD:http_method} %{URIPATHPARAM:endpoint} HTTP/%{NUMBER:http_version}\" %{NUMBER:response_code} %{NUMBER:response_size} \"%{DATA:referrer}\" \"%{DATA:user_agent}\"",
+              # JSON formatted logs
+              "\"method\":\"%{WORD:http_method}\".*\"url\":\"%{URIPATHPARAM:endpoint}\".*\"status\":%{NUMBER:response_code}",
+              # Simple message pattern
+              "%{LOGLEVEL:log_level}.*%{GREEDYDATA:log_message}"
+            ]
+          }
+        }
+        
+        # Extract response time if present
+        grok {
+          match => { "message" => "(%{NUMBER:response_time}ms)" }
+        }
+      }
+
+      # Java Application (shipping)
+      if [kubernetes][container][name] == "shipping" {
+        # Java/Spring Boot logs
+        grok {
+          match => { 
+            "message" => [
+              # Spring Boot default format
+              "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:log_level} %{NUMBER:pid} --- \[%{DATA:thread}\] %{DATA:class} : %{GREEDYDATA:log_message}",
+              # Logback pattern
+              "%{TIMESTAMP_ISO8601:timestamp} %{WORD:level} %{DATA:logger} - %{GREEDYDATA:message}",
+              # HTTP requests in Spring
+              "method=%{WORD:http_method}, path=%{URIPATHPARAM:endpoint}, status=%{NUMBER:response_code}"
+            ]
+          }
+        }
+        
+        # Extract HTTP details from Java logs
+        grok {
+          match => { 
+            "[message]" => [
+              "method=%{WORD:http_method}.*path=%{URIPATHPARAM:endpoint}.*status=%{NUMBER:response_code}",
+              "GET|POST|PUT|DELETE %{URIPATHPARAM:endpoint}.*%{NUMBER:response_code}"
+            ]
+          }
+        }
+      }
+
+      # Python Application (payment)
+      if [kubernetes][container][name] == "payment" {
+        # Python/Django/Flask logs
+        grok {
+          match => { 
+            "message" => [
+              # Django request logs
+              "\[%{TIMESTAMP_ISO8601:timestamp}\] \"%{WORD:http_method} %{URIPATHPARAM:endpoint} HTTP/%{NUMBER:http_version}\" %{NUMBER:response_code} %{NUMBER:response_size}",
+              # Python logging format
+              "%{TIMESTAMP_ISO8601:timestamp} - %{WORD:log_level} - %{GREEDYDATA:log_message}",
+              # Flask/Werkzeug
+              "%{IP:client_ip} - - \[%{HTTPDATE:timestamp}\] \"%{WORD:http_method} %{URIPATHPARAM:endpoint} HTTP/%{NUMBER:http_version}\" %{NUMBER:response_code}"
+            ]
+          }
+        }
+      }
+
+      # Nginx (frontend)
+      if [kubernetes][container][name] == "frontend" {
+        # Nginx access logs
+        grok {
+          match => { 
+            "message" => [
+              # Nginx combined format
+              "%{IPORHOST:client_ip} - %{USER:ident} \[%{HTTPDATE:timestamp}\] \"%{WORD:http_method} %{URIPATHPARAM:endpoint} HTTP/%{NUMBER:http_version}\" %{NUMBER:response_code} %{NUMBER:response_size} \"%{DATA:referrer}\" \"%{DATA:user_agent}\" \"%{DATA:forwarded_for}\"",
+              # Nginx main format
+              "%{IPORHOST:client_ip} - - \[%{HTTPDATE:timestamp}\] \"%{WORD:http_method} %{URIPATHPARAM:endpoint} HTTP/%{NUMBER:http_version}\" %{NUMBER:response_code} %{NUMBER:response_size}",
+              # Error logs
+              "%{YEAR}/%{MONTHNUM}/%{MONTHDAY} %{TIME} \[%{WORD:log_level}\] %{NUMBER:pid}#%{NUMBER}: %{GREEDYDATA:error_message}"
+            ]
+          }
+        }
+        
+        # Extract request time from nginx
+        grok {
+          match => { "message" => "request_time=%{NUMBER:request_time}" }
+        }
+      }
+
+      # Convert numeric fields
       mutate {
-        convert => { "status" => "integer" }
+        convert => { 
+          "response_code" => "integer"
+          "response_size" => "integer" 
+          "response_time" => "float"
+          "request_time" => "float"
+          "pid" => "integer"
+        }
+      }
+
+      # Add timestamp parsing if not already parsed
+      if [timestamp] {
+        date {
+          match => [ "timestamp", "ISO8601", "YYYY/MM/dd HH:mm:ss", "dd/MMM/YYYY:HH:mm:ss Z" ]
+          target => "@timestamp"
+        }
+      }
+
+      # Clean up fields
+      mutate {
+        remove_field => [ "timestamp" ]
       }
     }
 
     output {
       elasticsearch {
         hosts => ["http://elasticsearch.logging.svc.cluster.local:9200"]
-        index => "app-logs-%{+YYYY.MM.dd}"
+        index => "microservice-logs-%{+YYYY.MM.dd}"
+      }
+      
+      # Optional: Debug output
+      stdout { 
+        codec => rubydebug 
+        id => "console_output"
       }
     }
 
