@@ -15,8 +15,8 @@ spec:
         file: logstash.yaml
       - name: filebeat
         file: filebeat.yaml
-      # - name: nginx
-      #   file: nginx.yaml
+      - name: nginx
+        file: nginx.yaml
   template:
     metadata:
       name: '{{name}}'
