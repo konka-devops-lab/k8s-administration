@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: instana
+  name: testing
   namespace: testing
 spec:
   description: testing project
