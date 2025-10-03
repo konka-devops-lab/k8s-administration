@@ -50,7 +50,7 @@ metadata:
 spec:
   selector:
     app: demo
-    version: blue  # start with blue
+    version: blue
   ports:
   - protocol: TCP
     port: 80
