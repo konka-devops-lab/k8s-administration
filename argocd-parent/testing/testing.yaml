@@ -3,7 +3,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
   name: testing
-  namespace: testing
+  namespace: argocd
 spec:
   description: testing project
   sourceRepos:
