@@ -13,7 +13,9 @@ spec:
           - path: namespaces/*.yaml
           - path: rbac/*.yaml
           - path: storage-classes/*.yaml
-          - path: metrics-server/*.yaml       
+          - path: metrics-server/*.yaml
+          - path: kind-gw/*.yaml
+          - path: http-path-routing/*.yaml      
   template:
     metadata:
       name: '{{path.basename}}'
@@ -56,6 +58,22 @@ metadata:
   namespace: argocd
 spec:
   description: Elastic Stack Project
+  sourceRepos:
+    - 'https://github.com/konka-devops-lab/k8s-administration.git'
+  destinations:
+    - namespace: '*'
+      server: '*'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kind-gw
+  namespace: argocd
+spec:
+  description: kind-gw project
   sourceRepos:
     - 'https://github.com/konka-devops-lab/k8s-administration.git'
   destinations:
