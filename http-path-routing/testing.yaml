@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
     - name: gateway
-      namespace: ngf-gatewayapi-ns
+      namespace: ngf-gatewayapi
       sectionName: http
   rules:
     - matches:
