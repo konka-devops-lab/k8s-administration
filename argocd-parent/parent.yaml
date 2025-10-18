@@ -54,6 +54,22 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
+  name: crud
+  namespace: argocd
+spec:
+  description: Crud project
+  sourceRepos:
+    - 'https://github.com/konka-devops-lab/crud-kustomization.git'
+  destinations:
+    - namespace: '*'
+      server: '*'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
   name: elastic-stack
   namespace: argocd
 spec:
